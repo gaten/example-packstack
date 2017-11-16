@@ -1,0 +1,49 @@
+---
+- hosts: all
+  user: vagrant
+  sudo: true
+
+  tasks:
+
+   - name: Disable firewalld
+     service: name=firewalld state=stopped enabled=no
+
+   - name: Disable Networkmanager
+     service: name=NetworkManager state=stopped enabled=no
+
+   - name: SELinux set to permissive (for provision)
+     selinux: policy=targeted state=permissive
+
+   - name: Disable SELinux for next boots
+     selinux: state=disabled
+
+   - name: Inject SSH keys to root
+     authorized_key: user=root key="{{ lookup('file', '/Users/gpaterno/.ssh/id_rsa.pub') }}"
+
+   - name: Set yum priorities
+     yum: name=yum-plugin-priorities state=present
+
+   - name: Enable EPEL repository
+     yum: name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm state=present
+ 
+   - name: Enable RDO repository
+     yum: name=https://www.rdoproject.org/repos/rdo-release.rpm
+
+   # Installing task packages
+   - name: Installing packages
+     yum: name={{ item }} state=latest
+     with_items:
+        - unzip
+        - git 
+        - net-tools 
+        - vim 
+        - openstack-packstack
+        - telnet
+        - tcpdump
+
+     #shell: "packstack --allinone --os-manila-install=n --os-ceilometer-install=n --os-sahara-install=n --os-heat-install=n --os-ironic-install=n  --nagios-install=n  --os-gnocchi-install=n  --os-aodh-install=n --default-password=admin4gippa --novanetwork-floating-range=192.168.199.192/29 && touch /root/.packstack"
+
+   - name: Setting up packstack
+     shell: "packstack --install-hosts=192.168.199.120 --allinone --default-password=adminadmin && touch /root/.packstack"
+     args:
+        creates: /root/.packstack
